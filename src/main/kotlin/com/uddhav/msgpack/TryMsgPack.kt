@@ -1,12 +1,14 @@
 package com.uddhav.msgpack
 
 import org.msgpack.core.* // ktlint-disable no-wildcard-imports
+import org.msgpack.value.ImmutableValue
 import org.msgpack.value.MapValue
 import org.msgpack.value.ValueFactory
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.lang.RuntimeException
+import java.time.Instant
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
@@ -30,30 +32,23 @@ class TryMsgPack {
 
     private fun pack(): MessageBufferPacker {
         val packer = MessagePack.newDefaultBufferPacker()
-        createMapValues().forEach { value -> packer.packValue(value) }
+        packer.packValue(payloadMap())
         packer.close()
         return packer
     }
 
-    private fun createMapValues(): Array<MapValue> = arrayOf(
-        ValueFactory.newMap(
-            ValueFactory.newString("fname"), ValueFactory.newString("Uddhav")
-        ),
-        ValueFactory.newMap(
-            ValueFactory.newString("lname"), ValueFactory.newString("Arote")
-        ),
-        ValueFactory.newMap(
-            ValueFactory.newString("previous_jobs"),
-            ValueFactory.newArray(
-                ValueFactory.newString("Software Engineer"),
-                ValueFactory.newString("Data Engineer"),
-                ValueFactory.newString("Sr.Software Engineer"),
-            )
-        ),
-        ValueFactory.newMap(
-            ValueFactory.newString("time"), ValueFactory.newTimestamp(System.currentTimeMillis())
+    private fun payloadMap(): MapValue {
+        val entries = listOf(
+            Pair(ValueFactory.newString("fname"), ValueFactory.newString("Uddhav")),
+            Pair(ValueFactory.newString("lname"), ValueFactory.newString("Arote")),
+            Pair(ValueFactory.newString("source_time"), ValueFactory.newTimestamp(System.currentTimeMillis()))
         )
-    )
+        return ValueFactory.newMap(
+            *entries
+                .plus(ValueFactory.newString("time") to ValueFactory.newInteger(Instant.now().epochSecond))
+                .flatMap { it.toList<ImmutableValue?>() }.toTypedArray()
+        ) as MapValue
+    }
 
     fun packAsMsgpackFile(): File {
         val packer = pack()
